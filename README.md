@@ -17,7 +17,7 @@ To execute some brainfuck:
 Hello World!
 ```
 
-Brainfuck can read from stdin, this is implemened using stdin redirect (`<`)
+Brainfuck can read from stdin, this is implemented using stdin redirect (`<`)
 ```shell
 program='-,+[-[>>++++[>++++++++<-]<+<-[>+>+>-[>>>]<[[>+<-]>>+>]<<<<<-]]>>>[-]+>--[-[<->+++[-]]]<[++++++++++++<[>-[>+>>]>[+[<+>-]>+>>]<<<<<-]>>[<+>-]>[-[-<<[-]>>]<<[<<->>-]>>]<<[<<+>>-]]<[-]<.[-]<-,+]'
 
