@@ -1,6 +1,6 @@
 # Readme
 
-Go-brainfuck is a suuuper simple implementation of the [brainfuck](https://en.wikipedia.org/wiki/Brainfuck) interpreter.
+Go-brainfuck is a suuuper simple implementation of the [brainfuck](https://en.wikipedia.org/wiki/Brainfuck) interpreter in golang.
 
 ## Usage
 
