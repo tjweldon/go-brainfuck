@@ -51,10 +51,8 @@ func main() {
 	}
 	interpreter.input = make([]byte, 32)
 	_, err = os.Stdin.Read(interpreter.input)
-	//fmt.Print(interpreter.input)
-	//fmt.Print(interpreter)
+
 	interpreter.interpret(
-		args.Tick,
 		[]InterpreterHook{
 			heartbeat(args.Tick),
 			dump,
@@ -126,7 +124,7 @@ func (interpreter *Interpreter) next() {
 	interpreter.iPointer++
 }
 
-func (interpreter *Interpreter) interpret(tick int, hooks []InterpreterHook) {
+func (interpreter *Interpreter) interpret(hooks []InterpreterHook) {
 	for interpreter.iPointer < len(instructions) {
 		for _, hook := range hooks {
 			hook(*interpreter)
@@ -138,10 +136,10 @@ func (interpreter *Interpreter) interpret(tick int, hooks []InterpreterHook) {
 func (interpreter *Interpreter) String() string {
 	w = tm.Width()
 
-	padding := []byte(strings.Repeat("\x20", w-len(instructions[interpreter.iPointer:])))
+	padding := []byte(strings.Repeat("\x20", max(w+2-len(instructions[interpreter.iPointer:]), 0)))
 	ticker := append(instructions, padding...)
 	s2 := fmt.Sprintf(
-		"%s\n%s\n%s\n%s\n%s\n",
+		"%32s\n%s\n%s\n%s\n%s\n",
 		interpreter.input,
 		ticker[interpreter.iPointer:],
 		hexOf(memory[:32]),
@@ -149,6 +147,13 @@ func (interpreter *Interpreter) String() string {
 		interpreter.output,
 	)
 	return s2
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }
 
 func hexOf(data []byte) string {
