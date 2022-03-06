@@ -5,23 +5,17 @@ import (
 	"fmt"
 	"github.com/alexflint/go-arg"
 	tm "github.com/buger/goterm"
+	"log"
 	"os"
 	"strings"
 	"time"
 )
-
-const Border = "─ │ ┌ ┐ └ ┘"
 
 type Interpreter struct {
 	iPointer int
 	dPointer int
 	output   []byte
 	input    []byte
-}
-
-type BoxOffset struct {
-	X int
-	Y int
 }
 
 var (
@@ -34,9 +28,7 @@ var (
 var args struct {
 	File         string `arg:"-f, --file" help:"The file containing the code"`
 	Instructions string `arg:"-i, --instructions" help:"The brainfuck code"`
-	Visual       bool   `arg:"-v, --visual" help:"Run in visual mode in tmux"`
 	Tick         int    `arg:"-t, --tick" help:"Execute in slow motion, time per instruction in milliseconds" default:"0"`
-	Debug        bool   `arg:"-d, --debug"`
 }
 
 type InterpreterHook func(i Interpreter)
@@ -46,11 +38,18 @@ var interpreter = Interpreter{}
 func main() {
 	arg.MustParse(&args)
 	instructions = []byte(args.Instructions)
+
 	if len(instructions) == 0 {
 		instructions, err = os.ReadFile(args.File)
 	}
-	interpreter.input = make([]byte, 32)
-	_, err = os.Stdin.Read(interpreter.input)
+	if bytes.Contains(instructions, []byte(",")) {
+		buff := make([]byte, 32)
+		_, err := os.Stdin.Read(buff[:32])
+		if err != nil {
+			log.Fatalln(err)
+		}
+		interpreter.input = buff
+	}
 
 	interpreter.interpret(
 		[]InterpreterHook{
@@ -58,7 +57,6 @@ func main() {
 			dump,
 		},
 	)
-	_, err = os.Stdout.Write(interpreter.output)
 }
 
 func (interpreter *Interpreter) next() {
@@ -136,13 +134,18 @@ func (interpreter *Interpreter) interpret(hooks []InterpreterHook) {
 func (interpreter *Interpreter) String() string {
 	w = tm.Width()
 
-	padding := []byte(strings.Repeat("\x20", max(w+2-len(instructions[interpreter.iPointer:]), 0)))
+	padding := []byte(strings.Repeat(" ", max(len(instructions)-interpreter.iPointer-1, 0)))
 	ticker := append(instructions, padding...)
+	ticker2 := make([]byte, w)
+	copy(ticker2, ticker[interpreter.iPointer:len(instructions)-1])
+	nothings := strings.Repeat(" ", w)
 	s2 := fmt.Sprintf(
-		"%32s\n%s\n%s\n%s\n%s\n",
-		interpreter.input,
-		ticker[interpreter.iPointer:],
-		hexOf(memory[:32]),
+		"%s\r%s\n%s\r%s\n% x\n%s\n%s\n",
+		strings.Repeat(" ", w),
+		string(interpreter.input),
+		nothings,
+		ticker2,
+		memory[:32],
 		renderPointer([]byte("___"), []byte("_⇡_"), 32),
 		interpreter.output,
 	)
@@ -154,14 +157,6 @@ func max(a, b int) int {
 		return a
 	}
 	return b
-}
-
-func hexOf(data []byte) string {
-	result := ""
-	for _, b := range data {
-		result += fmt.Sprintf("%02x ", b)
-	}
-	return result
 }
 
 type Sgr string
@@ -179,7 +174,12 @@ func (s Sgr) String() string {
 func renderPointer(bgEncoded []byte, ptrEncoded []byte, pRange int) string {
 	increment := len(bgEncoded)
 
-	styledEncodedPtr := fmt.Sprintf("%s%s%s", PtrStyle, string(ptrEncoded), Default+BgStyle)
+	styledEncodedPtr := fmt.Sprintf(
+		"%s%s%s",
+		PtrStyle,
+		string(ptrEncoded),
+		Default+BgStyle,
+	)
 
 	renderedBg := bytes.Repeat(bgEncoded, pRange-1)
 	ptrStrOffset := increment * interpreter.dPointer
@@ -210,15 +210,4 @@ func heartbeat(tick int) InterpreterHook {
 
 func dump(i Interpreter) {
 	fmt.Print(tm.MoveTo(i.String(), 0, 10))
-}
-
-func renderBox(box *tm.Box, boxContent []byte, position BoxOffset) {
-	_, err := fmt.Fprint(box, "   "+string(boxContent))
-	if err != nil {
-		panic(err)
-	}
-	_, err = tm.Print(tm.MoveTo(box.String(), position.X, position.Y))
-	if err != nil {
-		panic(err)
-	}
 }
